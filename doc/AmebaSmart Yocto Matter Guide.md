@@ -1,9 +1,24 @@
-# Yocto Matter host machine requirements
-- [Official Yocto System Requirements](https://docs.yoctoproject.org/4.0.19/ref-manual/system-requirements.html)
-- The following is the test system specifications that was used to build AmebaSmart Yocto Matter, consisting of:
-	1. connectedhomeip
-	2. AmebaSmart Yocto distro: ameba-full
-	3. AmebaSmart Yocto distro: ameba-generic
+# Environment Requirement
+
+## Hardware
+- Realtek Ameba Board (i.e. AmebaSmart RTL8730E VA7 or VA8 board)
+- USB cable – Micro USB
+- USB cable – Type-C USB
+- Computer running Ubuntu 22.04 LTS or Virtual Machine with Ubuntu 22.04 LTS
+
+### Virtual Machine
+If using VMware Workstation, a USB Bluetooth adapter is preferred. If needed, install the specific USB Bluetooth adapter driver on the guest operating system.
+Alternatively, you can attempt to enable Bluetooth adapter from your host computer. 
+VM -> Settings -> USB Controller -> Uncheck box for Share Bluetooth devices with the virtual machine -> OK. 
+Then, connect Bluetooth adapter to guest operating system. 
+VM -> Removable Devices -> Intel® Wireless Bluetooth® -> Connect (Disconnect from Host).
+In terminal, run `hciconfig` to ensure that Bluetooth adapter shows up, like hci0.
+
+VMware exposes the host operating system (ethernet or WIFI) network as ethernet connection type on the guest operating system. By default, VMware will set the network adapter to use Network Address Translation (NAT). During Matter commissioning, mDNS protocol is used and the mDNS packets will fail or timeout if NAT is used. To fix this, we need to ensure that the guest operating system network is under the same subnet. This can be done by switching the network connection type to bridge.
+VM- > Settings -> Network Adapter -> Choose Bridged: Connected directly to the physical network.
+Afterwards, within the guest operating system, restart the network to refresh the IP address.
+
+In terms of WIFI networking, VMware does not expose WIFI adapter from host operating system. In order to use WIFI on guest operating system, you may instead use a USB WIFI adapter.
 
 | System              | VMware                             |
 | ------------------- | ---------------------------------- |
@@ -16,6 +31,54 @@
 | Memory              | 8192MB (8GB)                       |
 | Processors          | 12th Gen Intel® Core™ i7-1255U × 8 |
 | Hard Disk (SCSI)    | 250GB                              |
+
+The test Virtual Machine system used for Yocto Matter development is outlined in the table above.
+
+According to [Official Yocto System Requirements](https://docs.yoctoproject.org/4.0.19/ref-manual/system-requirements.html), 8GB RAM is the minimum needed. If possible, more RAM (32GB) is recommended for the host machine or Virtual Machine. Otherwise, you can compensate by [increasing swap memory](#increasing-swap-memory).
+
+For other Virtual Machines, you can build the Matter environment and Projects on VM but BLE adapter may be unavailable so it’s impossible to perform [ble-wifi commissioning](#ble-commissioning). Alternatively, you could test with [wifi commissioning](#wifi-commissioning).
+
+### Increasing swap memory
+If your system does not have enough RAM, you may partially compensate by increasing swap memory (virtual page) to 32GB. Keep in mind that using swap memory results in slower build times as compared to using system RAM.
+
+For Ubuntu 22.04, you can expand swap memory as follows:
+1. Check current swap
+	```bash
+	grep Swap /proc/meminfo
+	```
+2. Turn off swap
+	```bash
+	sudo swapoff -a
+	```
+3. Create empty swapfile of 32GB
+	```bash
+	sudo dd if=/dev/zero of=/swapfile bs=1M count=32768
+	```
+4. Set swapfile permission
+	```bash
+	sudo chmod 0600 /swapfile
+	```
+5. Make swap
+	```bash
+	sudo mkswap /swapfile
+	```
+6. Turn on swap
+	```bash
+	sudo swapon /swapfile
+	```
+7. Check current swap
+	```bash
+	grep Swap /proc/meminfo
+	```
+8. Make swap size persistent on restarts
+	```bash
+	grep Swap /proc/meminfo
+	```
+	- Ensure the following line is present, otherwise, add it
+	```bash
+	/swapfile none swap sw 0 0
+	```
+
 # Yocto Matter setup
 > [!NOTE] 
 > Preferably connectedhomeip folder should be located on the same level as AmebaSmart Yocto SDK folder
@@ -37,7 +100,7 @@
 	```
 2. Git clone `connectedhomeip`
 	```bash
-	git clone -b v1.3-branch --recurse-submodules git@github.com:project-chip/connectedhomeip.git
+	git clone -b v1.3-branch --recurse-submodules https://github.com/project-chip/connectedhomeip.git
 	```
 3. Navigate inside `connectedhomeip`
 	```bash
@@ -45,7 +108,8 @@
 	```
 4. Update `connectedhomeip` submodules
 	```bash
-	git submodule update --init --recursive
+	git submodule sync --recursive
+	git submodule update --init --recursive --force
 	```
 5. Perform bootstrap
 	```bash
@@ -53,7 +117,7 @@
 	```
 6. Upgrade pip
 	```bash
-	python -m pip install --upgrade pip
+	pip install --upgrade pip
 	```
 7. Build tools (e.g. `chip-tool`, `chip-cert`) for host
 	```bash
@@ -66,7 +130,7 @@
 1. Open a new terminal shell
 2. Install utility packages
 	```bash
-	sudo apt install chrpath diffstat liblz4-tool zstd gawk python3-pycryptodome repo
+	sudo apt install chrpath diffstat liblz4-tool zstd gawk python3-dev python-is-python3 python3-pycryptodome repo
 	```
 3. Change shell to use bash
 	```bash
@@ -82,7 +146,7 @@
 	```bash
 	mkdir rtl8730e-linux-sdk-3.1-release
 	cd rtl8730e-linux-sdk-3.1-release
-	repo init -u https://github.com/Ameba-AIoT/ameba-linux-manifest -b ameba-3.1 -m ameba-3.1-matter.xml
+	repo init -u https://github.com/Ameba-AIoT/ameba-linux-manifest -b ameba-3.1 -m default-matter.xml
 	repo sync
 	```
 6. Run Yocto setup script
@@ -100,12 +164,11 @@
 8. (Optional) [Edit matter recipe settings](<#Edit-matter-recipe-settings>)
 
 # Edit matter recipe settings
-- At `~/rtl8730e-linux-sdk-3.1-release/sources/matter/recipes-matter/matter/matter.inc`
+- At `sources/yocto/meta-realtek-matter/recipes-matter/<matter-recipe>/<matter-recipe>.inc`
 
 ## Matter recipe variables
 1. `MATTER_APP_NAME`
 	- Give a list of the matter example apps you want to build
-	- Names should follow the exact directory names inside of `connectedhomeip/examples`
 	- Note that when removing matter apps to be built, commenting out a line with `#` does not work for `MATTER_APP_NAME`. Please delete the corresponding line of the matter app you want removed instead.
 
 2. `CHIP_ROOT`
@@ -131,7 +194,7 @@
 # Select Matter recipe
 Matter recipes will build example matter application(s).
 
-At `sources/matter/conf/layer.conf`, `IMAGE_INSTALL` variable, you can add the matter recipe you want to be included to the Yocto image.
+At `sources/yocto/meta-realtek-matter/conf/layer.conf`, `IMAGE_INSTALL` variable, you can add the matter recipe you want to be included to the Yocto image.
 
 For example, you can choose multiple matter recipes to install.
 ```bash
@@ -141,10 +204,10 @@ IMAGE_INSTALL += "matter matter-ported-examples matter-custom-dac-examples"
 ## Matter recipe types
 There are multiple matter recipes that have been prepared for you to use and explore.
 - `matter` recipe will add the Linux example matter applications from `connectedhomeip/examples/*/linux/`
-- `matter-ported-examples` recipe will add ported example matter applications from `sources/matter/examples/`
-- `matter-custom-dac-examples` recipe will add ported example matter applications that uses custom Device Attestation Certificate (DAC) for commissioning
+- `matter-ported-examples` recipe will add ported example matter applications from `sources/yocto/meta-realtek-matter/examples/`
+- `matter-custom-dac-examples` recipe will add ported example matter applications from `sources/yocto/meta-realtek-matter/examples/` that uses custom Device Attestation Certificate (DAC) for commissioning
 
-For ported matter examples, a `README.md` is available at the directory of the ported matter example source code `sources/matter/examples/`, to guide you to use the example.
+For ported matter examples, a README.md is available at each of the subdirectory of the ported matter example source code `meta-realtek-matter/examples/`, to guide you to use the example.
 
 
 # Build Yocto Matter
@@ -157,25 +220,35 @@ The steps to build matter is the same as the one from AmebaSmart Yocto SDK
 # Flashing image to board
 [AmebaSmart Yocto Flashing to NAND](<AmebaSmart Yocto Flashing to NAND.md>)
 
-# UART serial monitor
-- Baudrate: `1500000`
-- After flashing, reset the board by pressing `CHIP_EN` button
-# Connect to WIFI
-## ifupdown
-- On target AmebaSmart, run the following commands
-1. Add WIFI credentials
+# Serial Monitor
+
+| Settings  | Value       |
+| --------- | ----------- |
+| Baudrate  | 1500000 bps |
+| Data bits | 8           |
+| Parity    | None        |
+| Stop bits | 1           |
+| Encoding  | UTF8        |
+
+1. Connect USB port from computer to UART type-C on Ameba board
+2. Open Putty or similar serial monitor tools and set the baudrate to 1500000 to be able to view serial log output
+3. Press and release the reset button (CHIP_EN) to boot
+4. Once boot has completed, you should see the following on the serial output monitor
 	```bash
-	wpa_passphrase "WIFI_SSID" "WIFI_PASSWORD" >> /etc/wpa_supplicant.conf
+	...
+	Running local boot scripts (/etc/rc.local)
+	Welcome to RTL8730ELH
+	    _____     _____       ____      ____
+	   |  ___\ \ |  ___\ \  / ___  \  /  ___ \
+	   | |   | | | |   | | / /    \ \ | |
+	   | |--- /   \ ---| | | |    | |  \ --- \
+	   | |         ____/ /  \ \__/ /   ____/ /
+	   |_|        |____ /    \____/   |_____/
+	
 	```
-2. Turn off WIFI interface
-	```bash
-	ifdown wlan0
-	```
-3. Turn on WIFI interface
-	```bash
-	ifup wlan0
-	```
-# Running Yocto matter apps
+5. You can now use usual Linux commands (e.g. ls, cat, mkdir, touch, cd, cp, mv, rm, find, echo, chmod) on the serial monitor
+
+# Run Yocto matter apps
 > [!TIP]
 > [Remove stale chip configuration](<#remove-stale-chip-configuration>) on target AmebaSmart before every new commissioning
 
@@ -186,53 +259,84 @@ The steps to build matter is the same as the one from AmebaSmart Yocto SDK
 2. List installed matter apps
 	```bash
 	# ls
-	air-quality-sensor-app         chip-ota-requestor-app
-	chip-air-purifier-app          chip-refrigerator-app
-	chip-all-clusters-app          chip-rvc-app
-	chip-all-clusters-minimal-app  chip-tv-app
-	chip-bridge-app                chip-tv-casting-app
-	chip-dishwasher-app            contact-sensor-app
-	chip-energy-management-app     lit-icd-app
-	chip-lighting-app              network-manager-app
-	chip-lock-app                  persistent_storage
-	chip-microwave-oven-app        thermostat-app
-	chip-ota-provider-app
+	chip-lighting-app
+	thermostat-app
 	```
 3. Run matter app
 	```bash
-	./chip-lighting-app --wifi --discriminator 3844
+	./chip-lighting-app --wifi --discriminator 3840
 	```
-4. Commission matter app to network using [chip-tool](https://project-chip.github.io/connectedhomeip-doc/guides/chip_tool_guide.html) on host machine
+4. Look for the following line in the output logs and open the link in a web browser to see the QR code for commissioning
 	```bash
-	./chip-tool pairing ble-wifi 0x1213 "WIFI_SSID" "WIFI_PASSWORD" "20202021" "3844"
+	CHIP:SVR: https://project-chip.github.io/connectedhomeip/qrcode.html?data=MT%3A-24J042C00KA0648G00
 	```
-	Alternatively, if the target board is already on same WIFI network as host machine, commission over network,
+	- You should observe the following generated QR code,
+
+		![QR code for commissioning with discriminator 3840](<images/commissioning_qr_code_discriminator_3840.png>)
+
+		The QR code can be scanned by a commissioner (smartphone running Google Home, Apple HomeKit, Samsung SmartThings, or Home Assistant).
+
+# Commissioning
+To commission using Google Home, Apple Homekit, Samsung SmartThings, or Home Assistant, consult the vendor’s guide.
+
+We shall demonstrate how to commission using [chip-tool](https://project-chip.github.io/connectedhomeip-doc/guides/chip_tool_guide.html).
+
+## Commissioning Methods
+Ameba only supports BLE and WIFI commissioning methods.
+
+### BLE Commissioning
+Commission matter app to network using [chip-tool](https://project-chip.github.io/connectedhomeip-doc/guides/chip_tool_guide.html) on host machine
+```bash
+./chip-tool pairing ble-wifi 0x1234 "WIFI_SSID" "WIFI_PASSWORD" "20202021" "3840"
+```
+
+### WIFI Commissioning
+- If the target board is already on same WIFI network as host machine running chip-tool, commission over network,
 	```bash
-	./chip-tool pairing onnetwork-long 0x1213 20202021 3844
+	./chip-tool pairing onnetwork-long 0x1234 20202021 3840
 	```
-	
+- Alternatively, commission with QR code.
 	```bash
-	$ ./chip-tool pairing onnetwork-long 0x1213 20202021 3844 | grep "Commissioning complete"
-	[1719452234.100503][2680:2683] CHIP:CTL: Commissioning complete for node ID 0x0000000000001213: success
+	./chip-tool pairing code 0x1234 MT:-24J042C00KA0648G00
 	```
-5. On the host machine, use [chip-tool](https://project-chip.github.io/connectedhomeip-doc/guides/chip_tool_guide.html) to perform cluster control
+
+- When commissioning is successful, you should observe the following:
 	```bash
-	./chip-tool onoff on 0x1213 1
+	CHIP:TOO: Device commissioning completed with success
 	```
-	
+
+### Decommission
+- You can decommission a commissioned device using the unpair command
 	```bash
-	$ ./chip-tool onoff read on-off 0x1213 1 | grep OnOff
-	[1719452808.138994][2697:2700] CHIP:TOO:   OnOff: TRUE
+	./chip-tool pairing unpair 0x1234
 	```
-	
+
+- When decommissioning is successful, you should observe the following
 	```bash
-	./chip-tool levelcontrol move-to-level 150 0 0 0 0x1213 1
+	CHIP:TOO: Device unpair completed with success: 0000000000001234
 	```
-	
-	```bash
-	$ ./chip-tool levelcontrol read current-level 0x1213 1 | grep CurrentLevel
-	[1719452898.654921][2710:2713] CHIP:TOO:   CurrentLevel: 150
-	```
+
+# Controlling Commands
+On the host machine, use chip-tool to perform cluster control. Refer to [chip-tool](https://project-chip.github.io/connectedhomeip-doc/guides/chip_tool_guide.html) for full usage guide.
+
+Below are some examples of chip-tool commands to control clusters.
+```bash
+./chip-tool onoff on 0x1234 1
+```
+
+```bash
+$ ./chip-tool onoff read on-off 0x1234 1 | grep OnOff
+[1719452808.138994][2697:2700] CHIP:TOO:   OnOff: TRUE
+```
+
+```bash
+./chip-tool levelcontrol move-to-level 150 0 0 0 0x1234 1
+```
+
+```bash
+$ ./chip-tool levelcontrol read current-level 0x1234 1 | grep CurrentLevel
+[1719452898.654921][2710:2713] CHIP:TOO:   CurrentLevel: 150
+```
 
 # Remove stale chip configuration
 ```bash

@@ -52,12 +52,12 @@ This example demonstrates controlling LED brightness.
 - Using `rtk,data-tx-time0h = <0xC>` as an example, `0xC` in decimal is `12`. So, `time0h` corresponds to `12 * 25ns = 300ns`
 
 ## Building
-1. Add `matter-ported-examples` recipe to `IMAGE_INSTALL` at `sources/matter/conf/layer.conf`
+1. Add `matter-ported-examples` recipe to `IMAGE_INSTALL` at `sources/yocto/meta-realtek-matter/conf/layer.conf`
 ```bash
 IMAGE_INSTALL += "matter-ported-examples"
 ```
 
-2. Edit the file `sources/matter/recipes-matter/matter-ported-examples/matter-ported-examples.inc`, with the following
+2. Edit the file `sources/yocto/meta-realtek-matter/recipes-matter/matter-ported-examples/matter-ported-examples.inc`, with the following
 ```bash
 MATTER_APP_NAME ??= " \
     linux-lighting-app \
@@ -85,19 +85,19 @@ We shall use chip-tool to control the led.
 1. On target board, start the example
 ```bash
 cd /matter-ported-examples
-./linux-lighting-app --wifi --discriminator 3844
+./linux-lighting-app --wifi --discriminator 3840
 ```
 
 2. On your host computer, commission matter app using `chip-tool`
 
 Commission using ble-wifi
 ```bash
-./chip-tool pairing ble-wifi 0x1213 "WIFI_SSID" "WIFI_PASSWORD" "20202021" "3844"
+./chip-tool pairing ble-wifi 0x1234 "WIFI_SSID" "WIFI_PASSWORD" "20202021" "3840"
 ```
 
 Alternatively, if the target board is already on same WIFI network as host machine, commission over network,
 ```bash
-./chip-tool pairing onnetwork-long 0x1213 20202021 3844
+./chip-tool pairing onnetwork-long 0x1234 20202021 3840
 ```
 
 You can check the current wireless WIFI settings on the target board as follows
@@ -109,29 +109,29 @@ wlan0     ESSID:"WIFI_SSID"
 Commissioning success console output from chip-tool:
 ```bash
 ...
-CHIP:CTL: Commissioning complete for node ID 0x0000000000001213: success
+CHIP:CTL: Commissioning complete for node ID 0x0000000000001234: success
 CHIP:TOO: Device commissioning completed with success
 ...
 ```
 
 3. Enable led
 ```bash
-./chip-tool onoff on 0x1213 1
+./chip-tool onoff on 0x1234 1
 ```
 
 4. Increase led brightness
 ```bash
-./chip-tool levelcontrol move-to-level 120 0 0 0 0x1213 1
+./chip-tool levelcontrol move-to-level 120 0 0 0 0x1234 1
 ```
 
 5. Change RGB led colour
 ```bash
-./chip-tool colorcontrol move-to-hue-and-saturation 200 160 0 0 0 0x1213 1
+./chip-tool colorcontrol move-to-hue-and-saturation 200 160 0 0 0 0x1234 1
 ```
 
 6. Disable led
 ```bash
-./chip-tool onoff off 0x1213 1
+./chip-tool onoff off 0x1234 1
 ```
 
 

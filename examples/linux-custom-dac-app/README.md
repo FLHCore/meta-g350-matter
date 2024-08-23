@@ -65,7 +65,7 @@ myattestation/Chip-Test-DAC-FFF1-8001-PrivKey-1.der
 
 
 ## Building
-1. Add `matter-custom-dac-examples` recipe to `IMAGE_INSTALL` at `sources/matter/conf/layer.conf`
+1. Add `matter-custom-dac-examples` recipe to `IMAGE_INSTALL` at `sources/yocto/meta-realtek-matter/conf/layer.conf`
 ```bash
 IMAGE_INSTALL += "matter-custom-dac-examples"
 ```
@@ -78,19 +78,19 @@ We shall use chip-tool to commission.
 1. On target board, start the example
 ```bash
 cd /matter-ported-examples
-./linux-custom-dac-app --wifi --discriminator 3844
+./linux-custom-dac-app --wifi --discriminator 3840
 ```
 
 2. On your host computer, commission matter app using `chip-tool`
 
 Commission using ble-wifi
 ```bash
-./chip-tool pairing ble-wifi 0x1213 "WIFI_SSID" "WIFI_PASSWORD" "20202021" "3844" --paa-trust-store-path ~/dev/rtl8730e-linux-sdk-3.1-release/sources/matter/examples/linux-custom-dac-app/tools/factorydata/myattestation
+./chip-tool pairing ble-wifi 0x1234 "WIFI_SSID" "WIFI_PASSWORD" "20202021" "3840" --paa-trust-store-path ~/dev/rtl8730e-linux-sdk-3.1-release/sources/yocto/meta-realtek-matter/examples/linux-custom-dac-app/tools/factorydata/myattestation
 ```
 
 Alternatively, if the target board is already on same WIFI network as host machine, commission over network,
 ```bash
-./chip-tool pairing onnetwork-long 0x1213 20202021 3844 --paa-trust-store-path ~/dev/rtl8730e-linux-sdk-3.1-release/sources/matter/examples/linux-custom-dac-app/tools/factorydata/myattestation
+./chip-tool pairing onnetwork-long 0x1234 20202021 3840 --paa-trust-store-path ~/dev/rtl8730e-linux-sdk-3.1-release/sources/yocto/meta-realtek-matter/examples/linux-custom-dac-app/tools/factorydata/myattestation
 ```
 
 You can check the current wireless WIFI settings on the target board as follows
@@ -102,7 +102,7 @@ wlan0     ESSID:"WIFI_SSID"
 Commissioning success console output from chip-tool:
 ```bash
 ...
-CHIP:CTL: Commissioning complete for node ID 0x0000000000001213: success
+CHIP:CTL: Commissioning complete for node ID 0x0000000000001234: success
 CHIP:TOO: Device commissioning completed with success
 ...
 ```
