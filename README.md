@@ -1,9 +1,19 @@
 # Introduction
 This is a layer that builds Matter applications using [connectedhomeip](https://github.com/project-chip/connectedhomeip). 
-This layer depends and builds on top of [Realtek's Yocto BSP layer](https://github.com/Ameba-AIoT/ameba-linux-manifest/tree/ameba-3.1).
+This layer depends and builds on top of [MTK's Yocto BSP layer](https://mediatek.gitlab.io/aiot/doc/aiot-dev-guide/master/sw/yocto/get-started/build-code.html).
+
+
+It's a fork from [Ameba meta-realtek-matter](https://github.com/Ameba-AIoT/meta-realtek-matter).
+This fork disable bluez because g350 use bluedroid.
+It's a minimum support to run chip-tool on g350.
 
 # Usage
-To build and use this layer, refer to [AmebaSmart Yocto Matter Guide](<doc/AmebaSmart Yocto Matter Guide.md>)
+To build and use this layer, download it into yocto project source.
+in mtk yocto, it's /root/src/.
+then
+```
+bitbake-layers add-layer [meta-g350-matter path]
+```
 
 # Matter Layer Structure
 
