@@ -1,4 +1,4 @@
-require matter.inc
+require chip-tool.inc
 inherit externalsrc
 
 EXTERNALSRC_SYMLINKS = ""
