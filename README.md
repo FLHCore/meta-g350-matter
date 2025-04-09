@@ -1,18 +1,30 @@
 # Introduction
-This is a layer that builds Matter applications using [connectedhomeip](https://github.com/project-chip/connectedhomeip). 
-This layer depends and builds on top of [MTK's Yocto BSP layer](https://mediatek.gitlab.io/aiot/doc/aiot-dev-guide/master/sw/yocto/get-started/build-code.html).
 
+This is a Yocto layer for building Matter applications using [connectedhomeip](https://github.com/project-chip/connectedhomeip).  
+It is designed to work with [MediaTek's Yocto BSP layer](https://mediatek.gitlab.io/aiot/doc/aiot-dev-guide/master/sw/yocto/get-started/build-code.html).
 
-It's a fork from [Ameba meta-realtek-matter](https://github.com/Ameba-AIoT/meta-realtek-matter).
-This fork disable bluez because g350 use bluedroid.
-It's a minimum support to run chip-tool on g350.
+This layer is forked from [Ameba's meta-realtek-matter](https://github.com/Ameba-AIoT/meta-realtek-matter).  
+In this fork, BlueZ support is disabled because the G350 platform uses Bluedroid instead.
+
+This provides a minimal setup to run `chip-tool` on the G350.
 
 # Usage
-To build and use this layer, download it into yocto project source.
-in mtk yocto, it's /root/src/.
-then
+To build and use this layer, clone it into your Yocto project source directory.  
+For MTK Yocto, this is typically: /root/src/
+Then, add the layer:
+
+```bash
+bitbake-layers add-layer [path-to-meta-g350-matter]
 ```
-bitbake-layers add-layer [meta-g350-matter path]
+
+Note:
+You must also clone the connectedhomeip project outside of your Yocto project directory.
+Make sure the connectedhomeip project can be built independently before continuing.
+
+```bash
+git clone https://github.com/project-chip/connectedhomeip.git
+cd connectedhomeip
+./scripts/checkout_submodules.py --platform linux
 ```
 
 # Matter Layer Structure
