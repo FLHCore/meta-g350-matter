@@ -1,25 +1,20 @@
-# Introduction
+# meta-g350-matter
 
-This is a Yocto layer for building Matter applications using [connectedhomeip](https://github.com/project-chip/connectedhomeip).  
-It is designed to work with [MediaTek's Yocto BSP layer](https://mediatek.gitlab.io/aiot/doc/aiot-dev-guide/master/sw/yocto/get-started/build-code.html).
+A Yocto layer to integrate [Matter (connectedhomeip)](https://github.com/project-chip/connectedhomeip) on **MediaTek Genio 350 (G350)** platform.
 
-This layer is forked from [Ameba's meta-realtek-matter](https://github.com/Ameba-AIoT/meta-realtek-matter).  
-In this fork, BlueZ support is disabled because the G350 platform uses Bluedroid instead.
+This layer is a **fork of** [Ameba's `meta-realtek-matter`](https://github.com/Ameba-AIoT/meta-realtek-matter), customized to work with the **MTK G350** series.  
+The key modification includes **disabling BlueZ** (not supported on G350) in favor of **Bluedroid**.
 
-This provides a minimal setup to run `chip-tool` on the G350.
+> ✅ Provides a minimal setup to run `chip-tool` on Genio 350 EVK.
 
-# Usage
-To build and use this layer, clone it into your Yocto project source directory.  
-For MTK Yocto, this is typically: /root/src/
-Then, add the layer:
+---
 
-```bash
-bitbake-layers add-layer [path-to-meta-g350-matter]
-```
+## 🔧 Prerequisites
 
-Note:
-You must also clone the connectedhomeip project outside of your Yocto project directory.
-Make sure the connectedhomeip project can be built independently before continuing.
+- Yocto BSP for MTK Genio 350:  
+  [MTK Yocto BSP Guide](https://mediatek.gitlab.io/aiot/doc/aiot-dev-guide/master/sw/yocto/get-started/build-code.html)
+
+- [connectedhomeip](https://github.com/project-chip/connectedhomeip) SDK cloned and initialized **outside of the Yocto project directory**:
 
 ```bash
 git clone https://github.com/project-chip/connectedhomeip.git
@@ -27,18 +22,104 @@ cd connectedhomeip
 ./scripts/checkout_submodules.py --platform linux
 ```
 
-# Matter Layer Structure
+---
 
-| Directory                                 | Description                                                                                                                                                              |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| conf                                      | Contains the matter layer configuration file “layer.conf”, which contains configuration settings for the matter layer.                                                   |
-| doc                                       | Contains markdown formatted documentations for using the matter layer.                                                                                                   |
-| examples                                  | Contains the source code for ported matter application examples. Follow the included README.md within each example subdirectory to use the examples.                     |
-| recipes-connectivity                      | Contains specific WIFI and Bluetooth driver changes (overriding the base Ameba Yocto SDK) for Matter applications to be able to perform commissioning.                   |
-| recipes-devtools                          | Contains development tool recipes required to build matter recipes.                                                                                                      |
-| recipes-matter                            | Contains matter recipes to build matter example applications.                                                                                                            |
-| recipes-matter/matter                     | Contains recipes that will add the Linux example matter applications from connectedhomeip/examples/*/linux/.                                                             |
-| recipes-matter/matter-custom-dac-examples | Contains recipes that will add ported example matter applications from sources/matter/examples/ that uses custom Device Attestation Certificate (DAC) for commissioning. |
-| recipes-matter/matter-ported-examples     | Contains recipes that will add ported example matter applications from sources/matter/examples/.                                                                         |
+## 🚀 Getting Started
 
+### 1. Clone this layer into your Yocto project directory
 
+```bash
+cd /home/user/aiot-yocto/src
+git clone https://github.com/FLHCore/meta-g350-matter.git
+bitbake-layers add-layer meta-g350-matter
+```
+
+### 2. Run the environment setup script
+
+Create a `setup-env.sh` file and paste the following content:
+
+```bash
+#!/bin/bash
+
+set -e
+
+export PROJ_ROOT=$(pwd)
+export ROOTDIR=$PROJ_ROOT
+export TEMPLATECONF="$PROJ_ROOT/src/meta-rity/meta/conf/"
+source "$PROJ_ROOT/src/poky/oe-init-build-env"
+export BUILD_DIR=$(pwd)
+export MACHINE=genio-350-evk
+
+CHIP_SDK_PATH_VAL="/home/ross/connectedhomeip"
+CHIP_CONF="$BUILD_DIR/conf/local.conf"
+
+add_conf_if_missing() {
+    KEY="$1"
+    VALUE="$2"
+    if ! grep -q "^$KEY" "$CHIP_CONF"; then
+        echo "$KEY = "$VALUE"" >> "$CHIP_CONF"
+        echo "➕ Added $KEY to local.conf"
+    else
+        echo "✔ $KEY already set in local.conf"
+    fi
+}
+
+echo ""
+echo "🛠 Injecting Matter-related variables into local.conf..."
+add_conf_if_missing "CHIP_SDK_PATH" "$CHIP_SDK_PATH_VAL"
+add_conf_if_missing "CHIP_USE_GN" "1"
+add_conf_if_missing "USE_MATTER_SDK" "1"
+
+echo ""
+echo "✅ Yocto MTK build environment ready"
+echo "📁 BUILD_DIR = $BUILD_DIR"
+echo "📦 MACHINE   = $MACHINE"
+echo "🧱 SDK Path  = $CHIP_SDK_PATH_VAL"
+echo "👉 You can now run:  bitbake rity-demo-image"
+echo ""
+```
+
+run：
+
+```bash
+source ./setup-env.sh
+```
+
+This script will:
+- Set up environment variables (`PROJ_ROOT`, `BUILD_DIR`, etc.)
+- Source `oe-init-build-env`
+- Inject Matter-specific settings to `local.conf`
+
+### 3. Start building
+
+```bash
+export MACHINE=genio-350-evk
+bitbake rity-demo-image
+```
+
+---
+
+## 📂 Layer Structure
+
+| Directory                                 | Description                                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `conf`                                   | Yocto layer configuration (`layer.conf`).                                                                    |
+| `doc`                                    | Documentation in markdown format.                                                                            |
+| `examples`                               | Ported Matter example applications. Each subfolder has its own README.                                       |
+| `recipes-connectivity`                   | WiFi and Bluetooth driver overrides (Bluedroid instead of BlueZ).                                            |
+| `recipes-devtools`                       | Development tool recipes needed by Matter applications.                                                      |
+| `recipes-matter/`                        | Recipes to build Matter apps using the official Matter SDK.                                                  |
+| `recipes-matter/matter-ported-examples`  | Recipes for ported Matter examples from `sources/matter/examples`.                                           |
+| `recipes-matter/matter-custom-dac-examples` | Matter examples using custom DACs for commissioning.                                                     |
+
+---
+
+## ⚠️ Known Issues
+
+- Some users report **terminal disconnection** when:
+  - Build errors occur
+  - Pressing `Tab` for autocompletion
+
+If you encounter this:
+- Try using a more stable terminal emulator like **tmux** or **screen**
+- Or manually run each setup command in your shell
